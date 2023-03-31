@@ -64,20 +64,10 @@ import openai
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- Get token for Replicate from UI_-_-__-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
-# TODO: Get tokens from UI
-if "REPLICATE_API_TOKEN" in os.environ:
-  print("Replicate Token exists")
-else:
-    Replicate_TOKEN = "0da145ebb6ee17b520a00ebc492f0464d5ae352e"
-    os.environ["REPLICATE_API_TOKEN"] = Replicate_TOKEN
 
-if "DALLE2_API_TOKEN" in os.environ:
-  print("Dalle-2 Token exists")
-else:
-    TOKEN = "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"
-    os.environ["DALLE2_API_TOKEN"] = TOKEN
-
-openai.api_key = os.environ["DALLE2_API_TOKEN"]
+def set_token_from_UI(sd_token):
+    if sd_token != "":
+        os.environ["REPLICATE_API_TOKEN"] = sd_token
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_-Specify paths for images_-_-_-_-__-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -89,46 +79,190 @@ ai_image_path = os.path.join(blender_path, "ai_render.jpg")
 ai_skeleton_path = os.path.join(blender_path, "ai_skeleton_path.jpg")
 
 
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_-_-_- Create Properties _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
 
-from bpy.props import (StringProperty, PointerProperty)
+from bpy.props import (StringProperty, EnumProperty, PointerProperty)
 from bpy.types import (PropertyGroup, Panel)
 
 
 class MyProperties(PropertyGroup):
 
-    my_string: StringProperty(
-        name="Foo",
+    sd_token: StringProperty(
+        name= "New Token",
         description=":",
         default="",
         maxlen=1024,
         )
 
-    bar: StringProperty(
-        name="Bar",
+    sd_prompt: StringProperty(
+        name= "Prompt",
         description=":",
         default="",
         maxlen=1024,
         )
 
+    model_dropdown: EnumProperty(
+        name="Choose Model:",
+        description="Apply Data to attribute.",
+        items=[ 
+                ('canny', "Edge Detection (Canny)", ""),
+                ('depth', "Depth Detection", ""),
+                ('hed', "Detailed Edge Detection (HED)", ""),
+                ('normal', "Normal Map", ""),
+                ('mlsd', "Line Detection (M-LSD Lines)", ""),
+                ('scribble', "Scribble Detection", ""),
+                ('seg', "Semantic Segmentation", ""),
+                ('openpose', "Pose Detection (OpenPose)", ""),
+               ]
+        )
 
-class OBJECT_PT_MyOperatorUI(Panel):
-    bl_label = "Blender Pose AI Renderer"
-    bl_idname = "OBJECT_PT_my_panel"
+    num_samples: StringProperty(
+    name= "",
+    description=":",
+    default="1",
+    maxlen=1024,
+    )
+
+    image_resolution: StringProperty(
+    name= "",
+    description=":",
+    default="512",
+    maxlen=1024,
+    )
+
+    ddim_steps: StringProperty(
+    name= "",
+    description=":",
+    default="20",
+    maxlen=1024,
+    )
+
+    scale: StringProperty(
+    name= "",
+    description=":",
+    default="20",
+    maxlen=1024,
+    )
+
+    seed: StringProperty(
+    name= "",
+    description=":",
+    default="9",
+    maxlen=1024,
+    )
+
+    eta: StringProperty(
+    name= "",
+    description=":",
+    default="0",
+    maxlen=1024,
+    )
+
+    n_prompt: StringProperty(
+    name= "",
+    description=":",
+    default="longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+    maxlen=1024,
+    )
+
+    low_threshold: StringProperty(
+    name= "",
+    description=":",
+    default="100",
+    maxlen=1024,
+    )
+
+    high_threshold: StringProperty(
+    name= "",
+    description=":",
+    default="200",
+    maxlen=1024,
+    )
+
+    bg_threshold: StringProperty(
+    name= "",
+    description=":",
+    default="0",
+    maxlen=1024,
+    )
+
+    value_threshold: StringProperty(
+    name= "",
+    description=":",
+    default="0.1",
+    maxlen=1024,
+    )
+
+    distance_threshold: StringProperty(
+    name= "",
+    description=":",
+    default="0.1",
+    maxlen=1024,
+    )
+
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ Create Panel _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+class ParentClass(Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "scene"
+    bl_options = {"DEFAULT_CLOSED"}
+
+class OBJECT_PT_MyOperatorUI(ParentClass, Panel):
+    bl_label = "Blender Pose AI Renderer"
+    bl_idname = "OBJECT_PT_MyOperatorUI"
 
     def draw(self, context):
         layout = self.layout
         scene = context.scene
         my_tool = scene.my_tool
 
-        layout.prop(my_tool, "my_string")
-
         row = layout.row()
-        row.label(text="Stable Diffusion")
+        row.label(text="*add only if you have a new token")
+        layout.prop(my_tool, "sd_token")
+        layout.prop(my_tool, "model_dropdown")
+        layout.prop(my_tool, "sd_prompt")
+
         layout.operator("object.stable_diffusion_operator")
+
+class Parameters_PT_Panel(ParentClass, Panel):
+    bl_parent_id = "OBJECT_PT_MyOperatorUI"
+    bl_label = "Parameters"
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        my_tool = scene.my_tool
+
+        layout.row().label(text="Number of Samples (max. 4, higher values may OOM):")
+        layout.prop(my_tool, "num_samples")
+        layout.row().label(text="Image Resolution:")
+        layout.prop(my_tool, "image_resolution")
+        layout.row().label(text="DDIM Steps:")
+        layout.prop(my_tool, "ddim_steps")
+        layout.row().label(text="Scale (for classifier-free guidance):")
+        layout.prop(my_tool, "scale")
+        layout.row().label(text="Seed:")
+        layout.prop(my_tool, "seed")
+        layout.row().label(text="eta (Controls the amount of noise that is added to the input data during the de-noising diffusion process)")
+        layout.prop(my_tool, "eta")
+        layout.row().label(text="Negative Prompt:")
+        layout.prop(my_tool, "n_prompt")
+        layout.row().label(text="Low Threshold (For Canny only):")
+        layout.prop(my_tool, "low_threshold")
+        layout.row().label(text="High Threshold (For Canny only):")
+        layout.prop(my_tool, "high_threshold")
+        layout.row().label(text="Background Threshold (For Normal only):")
+        layout.prop(my_tool, "bg_threshold")
+        layout.row().label(text="Value Threshold (For MLSD only):")
+        layout.prop(my_tool, "value_threshold")
+        layout.row().label(text="Distance Threshold (For MLSD only):")
+        layout.prop(my_tool, "distance_threshold")
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_ Stable Diffusion Operator -_-_-_-_-__-_-_-_-_-_-_-_-_-_-_-_
@@ -144,7 +278,7 @@ class WM_OT_SDOperator(bpy.types.Operator):
         area.type = 'IMAGE_EDITOR'
 
 
-    def call_API(self):
+    def call_API(self, model, prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold):
         # bpy.context.space_data.context = 'WORLD'
         bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1, 1, 1, 1)
         bpy.context.scene.view_settings.exposure = -0.5
@@ -154,12 +288,30 @@ class WM_OT_SDOperator(bpy.types.Operator):
         # Render the image
         bpy.ops.render.render(write_still=True)
         output_file_path = bpy.context.scene.render.filepath
+        input={
+            "image": open(output_file_path, "rb"),
+            "prompt": prompt,
+            "model_type": model,
+            "num_samples": num_samples,
+            "image_resolution": image_resolution,
+            "ddim_steps": int(ddim_steps, 10),
+            "scale": int(scale, 10),
+            "seed": int(seed, 10),
+            "eta": int(eta, 10),
+            "n_prompt": n_prompt,
+        }
+        if model == "canny":
+            input["low_threshold"]: low_threshold
+            input["high_threshold"]: high_threshold
+        elif model == "normal":
+            input["bg_threshold"]: bg_threshold
+        elif model == "mlsd":
+            input["value_threshold"]: value_threshold
+            input["distance_threshold"]: distance_threshold
+
         output = replicate.run(
-            "jagilley/controlnet-pose:0304f7f774ba7341ef754231f794b1ba3d129e3c46af3022241325ae0c50fb99",
-            input={
-                "image": open(output_file_path, "rb"),
-                "prompt": "A slim and fit man on the street, photograph, advertisement, handsome, 8k, 4k, color",
-            }
+            "jagilley/controlnet:8ebda4c70b3ea2a2bf86e44595afb562a2cdf85525c620f1671a78113c9f325b",
+            input=input
         )
         url = output[1]
 
@@ -175,7 +327,25 @@ class WM_OT_SDOperator(bpy.types.Operator):
             print("Image not placed")
 
     def execute(self, context):
-        threading.Thread(target=self.call_API).start()
+        sd_token = context.scene.my_tool.sd_token
+        sd_prompt = context.scene.my_tool.sd_prompt
+        sd_model = context.scene.my_tool.model_dropdown
+        num_samples = context.scene.my_tool.num_samples
+        image_resolution = context.scene.my_tool.image_resolution
+        ddim_steps = context.scene.my_tool.ddim_steps
+        scale = context.scene.my_tool.scale
+        seed = context.scene.my_tool.seed
+        eta = context.scene.my_tool.eta
+        n_prompt = context.scene.my_tool.n_prompt
+        low_threshold = context.scene.my_tool.low_threshold
+        high_threshold = context.scene.my_tool.high_threshold
+        bg_threshold = context.scene.my_tool.bg_threshold
+        value_threshold = context.scene.my_tool.value_threshold
+        distance_threshold = context.scene.my_tool.distance_threshold
+
+
+        set_token_from_UI(sd_token)
+        threading.Thread(target=self.call_API, args=(sd_model, sd_prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold)).start()
         self.create_image_window()
         return {'FINISHED'}
 
@@ -196,7 +366,8 @@ def download_image(url, path):
 classes = (
     MyProperties,
     OBJECT_PT_MyOperatorUI,
-    WM_OT_SDOperator
+    WM_OT_SDOperator,
+    Parameters_PT_Panel
 )
 
 def register():

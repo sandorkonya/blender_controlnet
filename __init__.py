@@ -130,10 +130,6 @@ class OBJECT_PT_MyOperatorUI(Panel):
         row.label(text="Stable Diffusion")
         layout.operator("object.stable_diffusion_operator")
 
-        row = layout.row()
-        row.label(text="Dalle-2")
-        layout.operator("object.dalle2_operator")
-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_ Stable Diffusion Operator -_-_-_-_-__-_-_-_-_-_-_-_-_-_-_-_
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -193,6 +189,9 @@ def download_image(url, path):
         with open(path, 'wb') as f:
             f.write(response.content)
 
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+#-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- Register Classes _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
 classes = (
     MyProperties,
@@ -212,42 +211,3 @@ def unregister():
     for cls in reversed(classes):
         unregister_class(cls)
     del bpy.types.Scene.my_tool
-
-
-# #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-# #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ DALLE-2 Operator -_-_-_-_-__-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-# #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-# class WM_OT_DALLE2Operator(bpy.types.Operator):
-#     bl_idname = "object.dalle2_operator"
-#     bl_label = "Render DALLE-2"
-
-#     def execute(self, context):
-#         bpy.context.scene.render.filepath = render_image_path
-#         # Render the image
-#         bpy.ops.render.render(write_still=True)
-#         # Access the output file path
-#         output_file_path = bpy.context.scene.render.filepath
-
-#         output = openai.Image.create_edit(
-#             image=open(output_file_path, "rb"),
-#             prompt="A mechanical man floating over a metallic ocean as the sun rises, apocalyptic, 35mm",
-#             n=1,
-#             size="256x256"
-#         )
-#         print('output: ', output["data"][0]['url'])
-#         url = output["data"][0]['url']
-
-#         download_image(url, ai_image_path)
-
-#         try:
-#             img = bpy.data.images.load(ai_image_path, check_existing=False)
-#             for window in bpy.data.window_managers["WinMan"].windows:
-#                 for area in window.screen.areas:
-#                     if area.type == "IMAGE_EDITOR":
-#                         area.spaces.active.image = img
-#             print("Worked?")
-#         except:
-#             print("Image not placed")
-        
-#         return {'FINISHED'}

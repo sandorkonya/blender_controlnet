@@ -11,7 +11,6 @@ bl_info = {
 }
 
 import bpy
-import re
 import sys
 import subprocess
 import platform

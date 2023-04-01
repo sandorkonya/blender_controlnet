@@ -70,7 +70,7 @@ from bpy.types import (PropertyGroup, Panel)
 class MyProperties(PropertyGroup):
 
     sd_token: StringProperty(
-        name= "New Token",
+        name= "Token",
         description=":",
         default="",
         maxlen=1024,
@@ -84,7 +84,7 @@ class MyProperties(PropertyGroup):
         )
 
     model_dropdown: EnumProperty(
-        name="Choose Model:",
+        name="Model",
         description="Apply Data to attribute.",
         items=[ 
                 ('canny', "Edge Detection (Canny)", ""),
@@ -182,6 +182,12 @@ class MyProperties(PropertyGroup):
     maxlen=1024,
     )
 
+def set_token_from_os():
+    try:
+        token =  os.environ["REPLICATE_API_TOKEN"]
+        return token
+    except:
+        return "Please enter your token"
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ Create Panel _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -201,8 +207,6 @@ class OBJECT_PT_MyOperatorUI(ParentClass, Panel):
         scene = context.scene
         my_tool = scene.my_tool
 
-        row = layout.row()
-        row.label(text="*add only if you have a new token")
         layout.prop(my_tool, "sd_token")
         layout.prop(my_tool, "model_dropdown")
         layout.prop(my_tool, "sd_prompt")
@@ -254,18 +258,32 @@ class WM_OT_SDOperator(bpy.types.Operator):
     def create_image_window(self):
         bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
         area = bpy.context.window_manager.windows[-1].screen.areas[0]
+        print('area: ', area)
         area.type = 'IMAGE_EDITOR'
 
 
-    def call_API(self, model, prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold):
-        # bpy.context.space_data.context = 'WORLD'
+    def set_token_from_UI(self, sd_token, context):
+        sd_token = context.scene.my_tool.sd_token
+        if sd_token != "":
+            os.environ["REPLICATE_API_TOKEN"] = sd_token
+        else:
+            try:
+                context.scene.my_tool.sd_token = os.environ["REPLICATE_API_TOKEN"]
+            except:
+                self.report({'INFO'}, "Please enter your token in the panel")
+
+
+    def call_API(self, model, prompt, num_samples, 
+                 image_resolution, ddim_steps, scale, 
+                 seed, eta, n_prompt, low_threshold, 
+                 high_threshold, bg_threshold, value_threshold, 
+                 distance_threshold):
         bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1, 1, 1, 1)
-        bpy.context.scene.view_settings.exposure = -0.5
-
-
         bpy.context.scene.render.filepath = render_image_path
+
         # Render the image
         bpy.ops.render.render(write_still=True)
+        print("Image rendered")
         output_file_path = bpy.context.scene.render.filepath
         input={
             "image": open(output_file_path, "rb"),
@@ -288,24 +306,31 @@ class WM_OT_SDOperator(bpy.types.Operator):
             input["value_threshold"]: value_threshold
             input["distance_threshold"]: distance_threshold
 
+        print("Making API call")
         output = replicate.run(
             "jagilley/controlnet:8ebda4c70b3ea2a2bf86e44595afb562a2cdf85525c620f1671a78113c9f325b",
             input=input
         )
+        print("API response received: ", output)
+        skeleton_url = output[0]
         url = output[1]
 
-        download_image(output[0], ai_skeleton_path)
+        download_image(skeleton_url, ai_skeleton_path)
         download_image(url, ai_image_path)
+        print("Images downloaded")
         try:
             img = bpy.data.images.load(ai_image_path, check_existing=False)
             for window in bpy.data.window_managers["WinMan"].windows:
+                print('windows')
                 for area in window.screen.areas:
+                    print('areaaa: ', area)
                     if area.type == "IMAGE_EDITOR":
                         area.spaces.active.image = img
         except:
             print("Image not placed")
 
     def execute(self, context):
+        print('Begin execution')
         sd_token = context.scene.my_tool.sd_token
         sd_prompt = context.scene.my_tool.sd_prompt
         sd_model = context.scene.my_tool.model_dropdown
@@ -322,10 +347,11 @@ class WM_OT_SDOperator(bpy.types.Operator):
         value_threshold = context.scene.my_tool.value_threshold
         distance_threshold = context.scene.my_tool.distance_threshold
 
-
-        set_token_from_UI(sd_token)
-        threading.Thread(target=self.call_API, args=(sd_model, sd_prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold)).start()
-        self.create_image_window()
+        print('Setting token')
+        self.set_token_from_UI(sd_token, context)
+        if sd_token != "":
+            threading.Thread(target=self.call_API, args=(sd_model, sd_prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold)).start()
+            self.create_image_window()
         return {'FINISHED'}
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-

@@ -20,7 +20,7 @@ import requests
 import threading
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#_-_-_-_-_-_-_-_-_-_-_-_ Install pip, openAI and replicate depending on OS_-_-_-_-_-_-_-_-_-_-_-_
+#_-_-_-_-_-_-_-_-_-_-_-_ Install pip and replicate depending on OS_-_-_-_-_-_-_-_-_-_-_-_
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
 # Install pip
@@ -46,27 +46,7 @@ if "\nreplicate==" not in pip_frozen:
     elif this_os == "Linux" or this_os == "Darwin":
         subprocess.call([python_exe, "-m", "pip", "install", "replicate"])
 
-# Install openAI
-pip_frozen = subprocess.check_output([python_exe, "-m", "pip", "freeze"])
-pip_frozen = pip_frozen.decode("utf-8")
-if "\nopenai==" not in pip_frozen:
-    print("openai not installed")
-    if this_os == "Windows":
-        subprocess.call([python_exe, "-m", "pip", "install", "--upgrade", "openai", "-t", target]) 
-    elif this_os == "Linux" or this_os == "Darwin":
-        subprocess.call([python_exe, "-m", "pip", "install", "openai"])
-
 import replicate
-import openai
-
-#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- Get token for Replicate from UI_-_-__-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-
-def set_token_from_UI(sd_token):
-    if sd_token != "":
-        os.environ["REPLICATE_API_TOKEN"] = sd_token
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_-Specify paths for images_-_-_-_-__-_-_-_-_-_-_-_-_-_-_-_-_-_-

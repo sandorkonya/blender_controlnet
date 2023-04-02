@@ -1,13 +1,13 @@
 
 bl_info = {
-    "name" : "Pose-AI-Renderer",
+    "name" : "Blender-AI-Renderer",
     "author" : "Arjuna Dev",
     "description" : "",
     "blender" : (2, 80, 0),
     "version" : (0, 0, 1),
     "location" : "",
     "warning" : "",
-    "category" : "Generic"
+    "category" : "Rendering"
 }
 
 import bpy
@@ -47,16 +47,6 @@ if "\nreplicate==" not in pip_frozen:
         subprocess.call([python_exe, "-m", "pip", "install", "replicate"])
 
 import replicate
-
-#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_-Specify paths for images_-_-_-_-__-_-_-_-_-_-_-_-_-_-_-_-_-_-
-#_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
-blender_path = os.path.abspath(bpy.path.abspath("images"))
-render_image_path = os.path.join(blender_path, "rendered.png")
-ai_image_path = os.path.join(blender_path, "ai_render.jpg")
-ai_skeleton_path = os.path.join(blender_path, "ai_skeleton_path.jpg")
-
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_-_-_- Create Properties _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -199,7 +189,7 @@ class ParentClass(Panel):
     bl_options = {"DEFAULT_CLOSED"}
 
 class OBJECT_PT_MyOperatorUI(ParentClass, Panel):
-    bl_label = "Blender Pose AI Renderer"
+    bl_label = "Blender AI Renderer"
     bl_idname = "OBJECT_PT_MyOperatorUI"
 
     def draw(self, context):
@@ -207,6 +197,7 @@ class OBJECT_PT_MyOperatorUI(ParentClass, Panel):
         scene = context.scene
         my_tool = scene.my_tool
 
+        layout.row().label(text="Enter a token from replicate.com")
         layout.prop(my_tool, "sd_token")
         layout.prop(my_tool, "model_dropdown")
         layout.prop(my_tool, "sd_prompt")
@@ -258,8 +249,9 @@ class WM_OT_SDOperator(bpy.types.Operator):
     def create_image_window(self):
         bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
         area = bpy.context.window_manager.windows[-1].screen.areas[0]
-        print('area: ', area)
+        area.header_text_set("Yoyoyo")
         area.type = 'IMAGE_EDITOR'
+        return area
 
 
     def set_token_from_UI(self, sd_token, context):
@@ -277,7 +269,18 @@ class WM_OT_SDOperator(bpy.types.Operator):
                  image_resolution, ddim_steps, scale, 
                  seed, eta, n_prompt, low_threshold, 
                  high_threshold, bg_threshold, value_threshold, 
-                 distance_threshold):
+                 distance_threshold, image_windows):
+        
+        home_directory = os.path.expanduser("~")
+        bl_ai_render_dir = os.path.join(home_directory, "Blender_AI_Render")
+
+        if not os.path.exists(bl_ai_render_dir):
+            os.mkdir(bl_ai_render_dir)
+
+        render_image_path = os.path.join(bl_ai_render_dir, "rendered.png")
+        ai_image_path = os.path.join(bl_ai_render_dir, "ai_render.jpg")
+        ai_skeleton_path = os.path.join(bl_ai_render_dir, "ai_skeleton_path.jpg")
+
         bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1, 1, 1, 1)
         bpy.context.scene.render.filepath = render_image_path
 
@@ -319,13 +322,18 @@ class WM_OT_SDOperator(bpy.types.Operator):
         download_image(url, ai_image_path)
         print("Images downloaded")
         try:
-            img = bpy.data.images.load(ai_image_path, check_existing=False)
+            ai_img = bpy.data.images.load(ai_image_path, check_existing=False)
+            render_img = bpy.data.images.load(render_image_path, check_existing=False)
+            skeleton_img = bpy.data.images.load(ai_skeleton_path, check_existing=False)
+
             for window in bpy.data.window_managers["WinMan"].windows:
-                print('windows')
                 for area in window.screen.areas:
-                    print('areaaa: ', area)
-                    if area.type == "IMAGE_EDITOR":
-                        area.spaces.active.image = img
+                    if area == image_windows["render"]:
+                        area.spaces.active.image = render_img
+                    if area == image_windows["ai"]:
+                        area.spaces.active.image = ai_img
+                    if area == image_windows["skeleton"]:
+                        area.spaces.active.image = skeleton_img
         except:
             print("Image not placed")
 
@@ -350,8 +358,14 @@ class WM_OT_SDOperator(bpy.types.Operator):
         print('Setting token')
         self.set_token_from_UI(sd_token, context)
         if sd_token != "":
-            threading.Thread(target=self.call_API, args=(sd_model, sd_prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold)).start()
-            self.create_image_window()
+            render = self.create_image_window()
+            skeleton = self.create_image_window()
+            ai = self.create_image_window()
+            image_windows = {}
+            image_windows["render"] = render
+            image_windows["skeleton"] = skeleton
+            image_windows["ai"] = ai
+            threading.Thread(target=self.call_API, args=(sd_model, sd_prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold, image_windows)).start()
         return {'FINISHED'}
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-

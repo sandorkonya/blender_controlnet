@@ -64,6 +64,7 @@ class MyProperties(PropertyGroup):
         description=":",
         default="",
         maxlen=1024,
+        subtype='PASSWORD',
         )
 
     sd_prompt: StringProperty(
@@ -185,7 +186,7 @@ def set_token_from_os():
 class ParentClass(Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
-    bl_context = "scene"
+    bl_context = "render"
     bl_options = {"DEFAULT_CLOSED"}
 
 class OBJECT_PT_MyOperatorUI(ParentClass, Panel):
@@ -249,10 +250,8 @@ class WM_OT_SDOperator(bpy.types.Operator):
     def create_image_window(self):
         bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
         area = bpy.context.window_manager.windows[-1].screen.areas[0]
-        area.header_text_set("Yoyoyo")
         area.type = 'IMAGE_EDITOR'
         return area
-
 
     def set_token_from_UI(self, sd_token, context):
         sd_token = context.scene.my_tool.sd_token
@@ -281,7 +280,6 @@ class WM_OT_SDOperator(bpy.types.Operator):
         ai_image_path = os.path.join(bl_ai_render_dir, "ai_render.jpg")
         ai_skeleton_path = os.path.join(bl_ai_render_dir, "ai_skeleton_path.jpg")
 
-        bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1, 1, 1, 1)
         bpy.context.scene.render.filepath = render_image_path
 
         # Render the image
@@ -337,6 +335,13 @@ class WM_OT_SDOperator(bpy.types.Operator):
         except:
             print("Image not placed")
 
+    def ShowLoadingMessage(message = "", title = "Processing...", icon = 'INFO'):
+
+        def draw(self, context):
+            self.layout.label(text="Please wait while we generate your image! If the servers are 'cold' it might take a few minutes.")
+
+        bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
     def execute(self, context):
         print('Begin execution')
         sd_token = context.scene.my_tool.sd_token
@@ -365,6 +370,7 @@ class WM_OT_SDOperator(bpy.types.Operator):
             image_windows["render"] = render
             image_windows["skeleton"] = skeleton
             image_windows["ai"] = ai
+            self.ShowLoadingMessage()
             threading.Thread(target=self.call_API, args=(sd_model, sd_prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold, image_windows)).start()
         return {'FINISHED'}
 

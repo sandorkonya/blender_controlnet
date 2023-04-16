@@ -1,1 +1,2 @@
         subtype='PASSWORD',
+        subtype='PASSWORD',

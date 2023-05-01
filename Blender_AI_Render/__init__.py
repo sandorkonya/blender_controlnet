@@ -173,12 +173,6 @@ class MyProperties(PropertyGroup):
     maxlen=1024,
     )
 
-def set_token_from_os():
-    try:
-        token =  os.environ["REPLICATE_API_TOKEN"]
-        return token
-    except:
-        return "Please enter your token"
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ Create Panel _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -198,7 +192,7 @@ class OBJECT_PT_MyOperatorUI(ParentClass, Panel):
         scene = context.scene
         my_tool = scene.my_tool
 
-        layout.row().label(text="Enter a token from replicate.com")
+        layout.row().label(text="Enter a token from replicate.com:")
         layout.prop(my_tool, "sd_token")
         layout.prop(my_tool, "model_dropdown")
         layout.prop(my_tool, "sd_prompt")
@@ -243,7 +237,7 @@ class Parameters_PT_Panel(ParentClass, Panel):
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- _-_ Stable Diffusion Operator -_-_-_-_-__-_-_-_-_-_-_-_-_-_-_-_
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
-class WM_OT_SDOperator(bpy.types.Operator):
+class Operator(bpy.types.Operator):
     bl_idname = "object.stable_diffusion_operator"
     bl_label = "Render With Stable Diffusion"
 
@@ -283,7 +277,11 @@ class WM_OT_SDOperator(bpy.types.Operator):
         bpy.context.scene.render.filepath = render_image_path
 
         # Render the image
-        bpy.ops.render.render(write_still=True)
+        print("Rendering image")
+        try:
+            bpy.ops.render.render(write_still=True)
+        except:
+            return {'FINISHED'}
         print("Image rendered")
         output_file_path = bpy.context.scene.render.filepath
         input={
@@ -333,17 +331,15 @@ class WM_OT_SDOperator(bpy.types.Operator):
                     if area == image_windows["skeleton"]:
                         area.spaces.active.image = skeleton_img
         except:
-            print("Image not placed")
+            return {'FINISHED'}
 
     def ShowLoadingMessage(message = "", title = "Processing...", icon = 'INFO'):
 
         def draw(self, context):
             self.layout.label(text="Please wait while we generate your image! If the servers are 'cold' it might take a few minutes.")
-
         bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
     def execute(self, context):
-        print('Begin execution')
         sd_token = context.scene.my_tool.sd_token
         sd_prompt = context.scene.my_tool.sd_prompt
         sd_model = context.scene.my_tool.model_dropdown
@@ -360,7 +356,7 @@ class WM_OT_SDOperator(bpy.types.Operator):
         value_threshold = context.scene.my_tool.value_threshold
         distance_threshold = context.scene.my_tool.distance_threshold
 
-        print('Setting token')
+
         self.set_token_from_UI(sd_token, context)
         if sd_token != "":
             render = self.create_image_window()
@@ -372,6 +368,9 @@ class WM_OT_SDOperator(bpy.types.Operator):
             image_windows["ai"] = ai
             self.ShowLoadingMessage()
             threading.Thread(target=self.call_API, args=(sd_model, sd_prompt, num_samples, image_resolution, ddim_steps, scale, seed, eta, n_prompt, low_threshold, high_threshold, bg_threshold, value_threshold, distance_threshold, image_windows)).start()
+        else:
+            self.report({"ERROR"}, "No API token provided")
+            return {'FINISHED'}
         return {'FINISHED'}
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -391,7 +390,7 @@ def download_image(url, path):
 classes = (
     MyProperties,
     OBJECT_PT_MyOperatorUI,
-    WM_OT_SDOperator,
+    Operator,
     Parameters_PT_Panel
 )
 
